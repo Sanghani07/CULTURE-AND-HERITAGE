@@ -1,0 +1,62 @@
+{
+  "name": "fi-money-assistant",
+  "version": "1.0.0",
+  "description": "AI-powered personal finance assistant using Fi Money MCP Server",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "nodemon --exec ts-node src/server.ts",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "tsc && cd frontend && npm run build",
+    "start": "node dist/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "test": "jest",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.1.0",
+    "@modelcontextprotocol/server": "^0.1.0",
+    "@prisma/client": "^5.6.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1",
+    "openai": "^4.20.1",
+    "langchain": "^0.0.190",
+    "zod": "^3.22.4",
+    "winston": "^3.11.0",
+    "express-rate-limit": "^7.1.5",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.10",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5.2.2",
+    "ts-node": "^10.9.1",
+    "nodemon": "^3.0.1",
+    "prisma": "^5.6.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8",
+    "eslint": "^8.54.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "finance",
+    "ai",
+    "mcp",
+    "personal-finance",
+    "assistant"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
