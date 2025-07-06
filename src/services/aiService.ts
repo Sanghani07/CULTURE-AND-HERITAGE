@@ -1,118 +1,248 @@
+/**
+ * AI Service for Financial Intelligence
+ * 
+ * This service provides AI-powered financial analysis capabilities using OpenAI's GPT models.
+ * It handles natural language understanding, query analysis, and intelligent response generation
+ * for financial data and insights.
+ * 
+ * Core Capabilities:
+ * - Natural language query analysis to determine data requirements
+ * - Financial context understanding and reasoning
+ * - Intelligent insight generation based on financial patterns
+ * - Personalized recommendation engine
+ * - Multi-modal AI support (can be extended for other AI providers)
+ * 
+ * Integration Points:
+ * - OpenAI GPT-4 for advanced reasoning
+ * - Financial domain expertise through prompt engineering
+ * - Structured output formatting for consistent responses
+ */
+
 import OpenAI from 'openai';
 import { logger } from '../utils/logger';
 
+/**
+ * Query Analysis Interface
+ * 
+ * Defines the structure for AI analysis of user queries to determine
+ * what financial data needs to be retrieved.
+ */
 interface QueryAnalysis {
-  needsAccountBalance: boolean;
-  needsTransactions: boolean;
-  needsSpendingAnalysis: boolean;
-  needsInvestments: boolean;
-  needsGoals: boolean;
-  timeRange?: {
-    start: string;
-    end: string;
+  needsAccountBalance: boolean;    // Requires account balance data
+  needsTransactions: boolean;      // Requires transaction history
+  needsSpendingAnalysis: boolean;  // Requires spending analysis
+  needsInvestments: boolean;       // Requires investment portfolio data
+  needsGoals: boolean;            // Requires financial goals data
+  timeRange?: {                   // Optional date range filter
+    start: string;                // Start date (YYYY-MM-DD)
+    end: string;                  // End date (YYYY-MM-DD)
   };
-  analysisPeriod?: string;
-  transactionLimit?: number;
+  analysisPeriod?: string;        // Analysis period (month/quarter/year)
+  transactionLimit?: number;      // Maximum transactions to retrieve
 }
 
+/**
+ * AI Response Interface
+ * 
+ * Standardized structure for AI-generated responses to financial queries.
+ */
 interface AIResponse {
-  answer: string;
-  insights: string[];
-  recommendations: string[];
-  dataUsed: string[];
-  confidence: number;
+  answer: string;                 // Direct answer to user's question
+  insights: string[];             // Key financial insights discovered
+  recommendations: string[];      // Actionable financial recommendations
+  dataUsed: string[];            // Types of data used in analysis
+  confidence: number;             // AI confidence score (0-1)
 }
 
+/**
+ * AI Service Class
+ * 
+ * Manages AI model interactions for financial analysis and natural language processing.
+ */
 export class AIService {
-  private openai: OpenAI;
-  private initialized = false;
+  private openai: OpenAI;                    // OpenAI client instance
+  private initialized = false;               // Service initialization state
+  private readonly MODEL_GPT4 = 'gpt-4';           // GPT-4 model for complex reasoning
+  private readonly MODEL_GPT35 = 'gpt-3.5-turbo';  // GPT-3.5 for faster queries
 
+  /**
+   * Constructor - Initialize AI Service
+   * 
+   * Sets up OpenAI client with API key from environment variables.
+   * Does not establish connection until initialize() is called.
+   */
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY || '',
     });
+    
+    logger.info('🤖 AI Service instance created');
   }
 
+  /**
+   * Initialize AI Service
+   * 
+   * Establishes connection to OpenAI API and verifies functionality.
+   * Must be called before using any AI capabilities.
+   * 
+   * @throws {Error} If OpenAI API connection fails or API key is invalid
+   */
   async initialize(): Promise<void> {
     try {
-      // Test API connection
+      logger.info('🔧 Initializing AI Service...');
+      
+      // Verify OpenAI API connection and credentials
       await this.testConnection();
+      
       this.initialized = true;
-      logger.info('AI Service initialized successfully');
+      logger.info('✅ AI Service initialized successfully');
+      logger.info('🧠 Ready for financial AI analysis');
     } catch (error) {
-      logger.error('Failed to initialize AI Service:', error);
+      logger.error('❌ Failed to initialize AI Service:', error);
+      logger.error('💡 Check your OPENAI_API_KEY environment variable');
       throw error;
     }
   }
 
+  /**
+   * Test OpenAI API Connection
+   * 
+   * Sends a minimal test request to verify API connectivity and authentication.
+   * Used during initialization to catch configuration issues early.
+   * 
+   * @private
+   * @throws {Error} If API test fails
+   */
   private async testConnection(): Promise<void> {
     try {
+      logger.info('🔍 Testing OpenAI API connection...');
+      
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'user', content: 'Hello' }],
-        max_tokens: 5
+        model: this.MODEL_GPT35,           // Use faster model for test
+        messages: [{ role: 'user', content: 'Test connection' }],
+        max_tokens: 5,                     // Minimal response to save tokens
+        temperature: 0                     // Deterministic for testing
       });
       
+      // Validate response structure
       if (!response.choices || response.choices.length === 0) {
-        throw new Error('AI API connection test failed');
+        throw new Error('Invalid response from OpenAI API - no choices returned');
       }
+      
+      logger.info('✅ OpenAI API connection test successful');
     } catch (error) {
-      logger.error('AI API connection test failed:', error);
+      logger.error('❌ OpenAI API connection test failed:', error);
+      
+      // Provide helpful error messages based on common issues
+      if (error.message?.includes('401')) {
+        throw new Error('Invalid OpenAI API key - check OPENAI_API_KEY environment variable');
+      } else if (error.message?.includes('429')) {
+        throw new Error('OpenAI API rate limit exceeded - try again later');
+      } else if (error.message?.includes('network')) {
+        throw new Error('Network connection to OpenAI API failed - check internet connection');
+      }
+      
       throw error;
     }
   }
 
+  /**
+   * Analyze Financial Query to Determine Data Requirements
+   * 
+   * This method uses AI to understand the user's natural language query and determine
+   * exactly what financial data needs to be retrieved to provide a comprehensive answer.
+   * 
+   * AI Analysis Process:
+   * 1. Parse natural language intent and context
+   * 2. Identify required data types (accounts, transactions, investments, etc.)
+   * 3. Extract parameters (date ranges, limits, categories)
+   * 4. Return structured analysis for data gathering
+   * 
+   * @param query - Natural language financial question from user
+   * @returns QueryAnalysis object specifying data requirements
+   * 
+   * @example
+   * analyzeQuery("How much did I spend on food last month?")
+   * // Returns: { needsTransactions: true, needsSpendingAnalysis: true, analysisPeriod: "month" }
+   */
   async analyzeQuery(query: string): Promise<QueryAnalysis> {
+    // Ensure AI service is ready
     if (!this.initialized) {
-      throw new Error('AI Service not initialized');
+      throw new Error('AI Service not initialized - call initialize() first');
     }
 
     try {
-      const prompt = `
-        Analyze the following financial query and determine what data is needed to answer it.
-        Query: "${query}"
+      logger.info(`🔍 Analyzing financial query: "${query}"`);
 
-        Respond with a JSON object containing:
+      // Construct detailed prompt for query analysis
+      const prompt = `
+        You are a financial AI assistant. Analyze the following user query and determine what specific financial data is needed to provide a comprehensive answer.
+
+        User Query: "${query}"
+
+        Analyze the query and respond with a JSON object containing:
         {
-          "needsAccountBalance": boolean,
-          "needsTransactions": boolean,
-          "needsSpendingAnalysis": boolean,
-          "needsInvestments": boolean,
-          "needsGoals": boolean,
-          "timeRange": {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"} (optional),
-          "analysisPeriod": "month|quarter|year" (optional),
-          "transactionLimit": number (optional)
+          "needsAccountBalance": boolean,     // True if account balances are needed
+          "needsTransactions": boolean,       // True if transaction history is needed
+          "needsSpendingAnalysis": boolean,   // True if spending analysis is needed
+          "needsInvestments": boolean,        // True if investment data is needed
+          "needsGoals": boolean,             // True if financial goals data is needed
+          "timeRange": {                     // Optional: specific date range
+            "start": "YYYY-MM-DD",
+            "end": "YYYY-MM-DD"
+          },
+          "analysisPeriod": "month|quarter|year",  // Optional: analysis period
+          "transactionLimit": number              // Optional: max transactions to fetch
         }
 
-        Examples:
-        - "What's my account balance?" -> {"needsAccountBalance": true}
-        - "How much did I spend on food last month?" -> {"needsTransactions": true, "needsSpendingAnalysis": true, "analysisPeriod": "month"}
-        - "How is my investment portfolio performing?" -> {"needsInvestments": true}
-        - "Am I on track for my financial goals?" -> {"needsGoals": true}
+        EXAMPLES:
+        Query: "What's my account balance?" 
+        Response: {"needsAccountBalance": true}
+
+        Query: "How much did I spend on food last month?"
+        Response: {"needsTransactions": true, "needsSpendingAnalysis": true, "analysisPeriod": "month"}
+
+        Query: "How is my investment portfolio performing?"
+        Response: {"needsInvestments": true}
+
+        Query: "Am I on track for my financial goals?"
+        Response: {"needsGoals": true}
+
+        Query: "Show me my transactions from January 2024"
+        Response: {"needsTransactions": true, "timeRange": {"start": "2024-01-01", "end": "2024-01-31"}}
+
+        Be precise and only request data that's actually needed to answer the query.
       `;
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: this.MODEL_GPT35,           // Use GPT-3.5 for faster analysis
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 300,
-        temperature: 0.1
+        max_tokens: 300,                   // Sufficient for JSON response
+        temperature: 0.1                   // Low temperature for consistent analysis
       });
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
-        throw new Error('No response from AI service');
+        throw new Error('Empty response from AI service during query analysis');
       }
 
       try {
-        return JSON.parse(content);
+        const analysis = JSON.parse(content);
+        logger.info(`✅ Query analysis complete: ${JSON.stringify(analysis)}`);
+        return analysis;
       } catch (parseError) {
-        logger.error('Failed to parse AI response:', parseError);
-        // Return a default analysis if parsing fails
+        logger.error('❌ Failed to parse AI query analysis response:', parseError);
+        logger.error(`Raw AI response: ${content}`);
+        
+        // Fallback to rule-based analysis if AI parsing fails
+        logger.info('🔄 Falling back to rule-based query analysis...');
         return this.getDefaultQueryAnalysis(query);
       }
     } catch (error) {
-      logger.error('Error analyzing query:', error);
-      // Return a default analysis if AI service fails
+      logger.error('❌ Error during AI query analysis:', error);
+      
+      // Fallback to rule-based analysis if AI service fails
+      logger.info('🔄 Falling back to rule-based query analysis...');
       return this.getDefaultQueryAnalysis(query);
     }
   }

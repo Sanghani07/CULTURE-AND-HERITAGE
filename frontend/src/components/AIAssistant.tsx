@@ -1,3 +1,25 @@
+/**
+ * AI Financial Assistant Component
+ * 
+ * This component provides a chat-based interface for users to interact with the AI-powered
+ * financial assistant. It enables natural language queries about financial data and provides
+ * intelligent responses with insights and recommendations.
+ * 
+ * Key Features:
+ * - Real-time chat interface with message history
+ * - Natural language processing for financial queries
+ * - Structured AI responses with insights and recommendations
+ * - Quick question shortcuts for common queries
+ * - Loading states and error handling
+ * - Integration with MCP Server via API
+ * 
+ * User Experience:
+ * - Users can ask questions like "What's my spending this month?"
+ * - AI analyzes the query and fetches relevant financial data
+ * - Responses include direct answers, insights, and actionable recommendations
+ * - Chat history is maintained for context and reference
+ */
+
 'use client'
 
 import { useState } from 'react'
@@ -5,16 +27,29 @@ import { Send, Bot, User, TrendingUp, DollarSign, Target, PieChart } from 'lucid
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api'
 
+/**
+ * Message Interface
+ * 
+ * Defines the structure for chat messages between user and AI assistant.
+ * Includes optional fields for structured AI responses.
+ */
 interface Message {
-  id: string
-  type: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-  insights?: string[]
-  recommendations?: string[]
+  id: string                      // Unique message identifier
+  type: 'user' | 'assistant'      // Message sender type
+  content: string                 // Main message content
+  timestamp: Date                 // When the message was sent
+  insights?: string[]            // AI-generated insights (assistant only)
+  recommendations?: string[]      // AI-generated recommendations (assistant only)
 }
 
+/**
+ * AI Assistant Component
+ * 
+ * Main component that renders the chat interface and handles user interactions
+ * with the AI financial assistant.
+ */
 export function AIAssistant() {
+  // Message state management
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -23,8 +58,12 @@ export function AIAssistant() {
       timestamp: new Date(),
     }
   ])
-  const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  
+  // Input and loading state
+  const [input, setInput] = useState('')              // Current user input
+  const [isLoading, setIsLoading] = useState(false)   // Loading state for AI responses
+  
+  // React Query client for cache management
   const queryClient = useQueryClient()
 
   const sendMessage = useMutation({

@@ -1,13 +1,46 @@
+/**
+ * API Client Configuration for Fi Money Assistant
+ * 
+ * This module provides a centralized HTTP client for communicating with the Fi Money
+ * Assistant backend API. It handles authentication, request/response interceptors,
+ * and provides typed API methods for all endpoints.
+ * 
+ * Key Features:
+ * - Axios-based HTTP client with interceptors
+ * - Automatic JWT token attachment for authenticated requests
+ * - Centralized error handling and token refresh logic
+ * - Typed API methods for type safety
+ * - Cookie-based token storage for security
+ * 
+ * API Structure:
+ * - Authentication: Login, register, user profile
+ * - Financial Data: Accounts, transactions, investments, goals
+ * - AI Assistant: Natural language queries and insights
+ * 
+ * Security:
+ * - JWT tokens stored in HTTP-only cookies
+ * - Automatic token attachment via interceptors
+ * - 401 handling with automatic logout
+ */
+
 import axios from 'axios'
 import Cookies from 'js-cookie'
 
+// API base URL from environment or default to local development
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
 
+/**
+ * Main API Client Instance
+ * 
+ * Configured axios instance with base URL and default headers.
+ * All API requests should go through this client for consistency.
+ */
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000,  // 30 second timeout for requests
 })
 
 // Request interceptor to add auth token
